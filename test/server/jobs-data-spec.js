@@ -1,26 +1,29 @@
 var expect = require("chai").expect;
 var mongoose = require("mongoose");
-var jobModel = require("../models/Job");
 var Promise = require("bluebird");
-var jobsData =  require("../jobs-data.js");
+var jobsData =  require("../../jobs-data.js");
 
 function resetJobs() {
     return new Promise( function(resolve, reject) {
        mongoose.connection.collections['jobs'].drop(resolve, reject); 
     });
 }
-describe("get jobs", function() {
+describe("db get jobs", function() {
     var jobs;
     before(function(done){
         jobsData.connectDB('mongodb://localhost/eredoproject')
         .then( resetJobs )
         .then(jobsData.seedJobs)
         .then(jobsData.findJobs)
-        .then(function(collection) {
+        .then(function setJobs(collection) {
             jobs = collection;
             done();
         });        
     });
+    after(function() {
+        mongoose.connection.close();
+    });    
+    
     it("should never be empty since jobs are seeded", function () {
         expect(jobs.length).to.be.at.least(1);
     });
@@ -31,5 +34,28 @@ describe("get jobs", function() {
     
     it("should have a job with a description", function(){
         expect(jobs[0].description).to.not.be.empty;
+    });
+});
+
+describe("db save jobs", function(){
+   var job = {title: 'Taxi Driver', description: 'You will be driving like a mad man'};
+   var jobs;
+    before(function(done){
+        jobsData.connectDB('mongodb://localhost/eredoproject')
+        .then( resetJobs )
+        .then(function(){return jobsData.saveJob(job)})
+        .then(jobsData.findJobs)
+        .then(function setJobs(collection) {
+            jobs = collection;
+            done();
+        });        
+    });
+   
+    after(function() {
+        mongoose.connection.close();
+    });
+    
+    it("should have one job after saving one job", function(){
+       expect(jobs).to.have.length(1); 
     });
 });
